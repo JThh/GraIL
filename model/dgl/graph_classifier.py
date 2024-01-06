@@ -21,9 +21,11 @@ class GraphClassifier(nn.Module):
         self.rel_emb = nn.Embedding(self.params.num_rels, self.params.rel_emb_dim, sparse=False)
 
         if self.params.add_ht_emb:
-            self.fc_layer = nn.Linear(3 * self.params.num_gcn_layers * self.params.emb_dim + self.params.rel_emb_dim, 1)
+            self.fc_layer = nn.Linear(3 * self.params.num_gcn_layers * self.params.emb_dim + self.params.rel_emb_dim +
+                                      (self.kgemodel.hidden_dim * 2 if self.kgemodel else self.params.num_gcn_layers * self.params.emb_dim), 1)
         else:
-            self.fc_layer = nn.Linear(self.params.num_gcn_layers * self.params.emb_dim + self.params.rel_emb_dim, 1)
+            self.fc_layer = nn.Linear(self.params.num_gcn_layers * self.params.emb_dim + self.params.rel_emb_dim + 
+                                      (self.kgemodel.hidden_dim * 2 if self.kgemodel else self.params.num_gcn_layers * self.params.emb_dim), 1)
 
     def forward(self, data):
         g, rel_labels = data
@@ -40,7 +42,7 @@ class GraphClassifier(nn.Module):
         # Check if kgemodel is not None
         if self.kgemodel is not None:
             (kge_q_embs, kge_r_embs) = self.kgemodel(torch.cat([head_ids, rel_labels, tail_ids], dim=0), decompose=True)
-            kge_embs = torch.cat([kge_q_embs.view(-1, self.params.emb_dim), kge_r_embs.view(-1, self.params.emb_dim)], dim=1)
+            kge_embs = torch.cat([kge_q_embs.view(-1, self.kgemodel.hidden_dim), kge_r_embs.view(-1, self.kgemodel.hidden_dim)], dim=1)
         else:
             kge_embs = torch.zeros_like(head_embs).view(-1, self.params.num_gcn_layers * self.params.emb_dim)
 
